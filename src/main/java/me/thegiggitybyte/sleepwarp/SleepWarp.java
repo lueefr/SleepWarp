@@ -10,7 +10,7 @@ public final class SleepWarp {
 
     public SleepWarp(ModContainer modContainer) {
         SleepWarpConfig.register(modContainer);
-        Commands.register();
+        Commands.register(modContainer);
         WarpEngine.initialize();
     }
 }

@@ -5,6 +5,7 @@ import com.mojang.brigadier.context.CommandContext;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.chat.Component;
+import net.neoforged.fml.ModContainer;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 
 import static net.minecraft.commands.Commands.literal;
@@ -13,8 +14,8 @@ public final class Commands {
     private Commands() {
     }
 
-    static void register() {
-        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(Commands::onRegisterCommands);
+    static void register(ModContainer modContainer) {
+        modContainer.getEventBus().addListener(Commands::onRegisterCommands);
     }
 
     private static void onRegisterCommands(RegisterCommandsEvent event) {
