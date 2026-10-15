@@ -1,0 +1,31 @@
+modLoader="javafml"
+loaderVersion="[0,)"
+license="${mod_license}"
+
+[[mods]]
+modId="${mod_id}"
+version="${mod_version}"
+displayName="${mod_name}"
+description='''
+Accelerates time while sleeping instead of skipping directly to day.
+When installed on a multiplayer server, the acceleration speed scales with the number of players asleep.
+'''
+authors="thegiggitybyte (original creator), Patbox (updated fork), Motschen (configuration and 1.21 update)"
+logoFile="assets/sleepwarp/icon.png"
+
+[[mixins]]
+config="sleepwarp.mixins.json"
+
+[[dependencies.${mod_id}]]
+modId="neoforge"
+type="required"
+versionRange="[${neo_version},)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.${mod_id}]]
+modId="minecraft"
+type="required"
+versionRange="${minecraft_version_range}"
+ordering="NONE"
+side="BOTH"

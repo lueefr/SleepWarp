@@ -1,81 +1,84 @@
 plugins {
-    id 'net.fabricmc.fabric-loom' version '1.15-SNAPSHOT'
-    id "com.modrinth.minotaur" version "2.+"
+    id 'java-library'
     id 'maven-publish'
+    id 'net.neoforged.moddev' version '2.0.148'
 }
 
-repositories {
-    maven { url = "https://oss.sonatype.org/content/repositories/snapshots" }
-    maven { url = "https://maven.isxander.dev/releases" }
-    maven { url "https://maven.terraformersmc.com/releases/"}
-    maven { url 'https://api.modrinth.com/maven' }
-    maven { url = "https://maven.nucleoid.xyz/" }
-}
+version = "${mod_version}+${minecraft_version}"
+group = mod_group_id
 
 base {
-    archivesName = project.archives_base_name
-}
-version = project.mod_version + '+' + project.minecraft_version
-group = project.maven_group
-
-dependencies {
-    minecraft "com.mojang:minecraft:${project.minecraft_version}"
-    implementation "net.fabricmc:fabric-loader:${project.loader_version}"
-    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
-
-    implementation include("xyz.nucleoid:server-translations-api:${project.server_translation_version}")
-    implementation include ("maven.modrinth:midnightlib:${project.midnightlib_version}-fabric")
+    archivesName = archives_base_name
 }
 
-loom {
-    accessWidenerPath = file("src/main/resources/sleepwarp.accesswidener")
+java.toolchain.languageVersion = JavaLanguageVersion.of(25)
+
+sourceSets.main.resources {
+    srcDir('src/generated/resources')
+    exclude('**/*.bbmodel')
+    exclude('src/generated/**/.cache')
 }
 
-processResources {
-    inputs.property "version", project.version
+neoForge {
+    version = neo_version
 
-    filesMatching("fabric.mod.json") {
-        expand "version": project.version
+    runs {
+        server {
+            server()
+            programArgument '--nogui'
+            systemProperty 'neoforge.enabledGameTestNamespaces', mod_id
+        }
+
+        configureEach {
+            systemProperty 'forge.logging.markers', 'REGISTRIES'
+            logLevel = org.slf4j.event.Level.INFO
+        }
     }
 
-
-    from("src/main/resources/data/sleepwarp/lang") {
-        into("assets/sleepwarp/lang")
+    mods {
+        "${mod_id}" {
+            sourceSet(sourceSets.main)
+        }
     }
+}
+
+// NeoForge reads access transformers from this conventional location.
+
+var generateModMetadata = tasks.register('generateModMetadata', ProcessResources) {
+    var replaceProperties = [
+            minecraft_version      : minecraft_version,
+            minecraft_version_range: minecraft_version_range,
+            neo_version            : neo_version,
+            mod_id                 : mod_id,
+            mod_name               : mod_name,
+            mod_license            : mod_license,
+            mod_version            : project.version,
+    ]
+    inputs.properties replaceProperties
+    expand replaceProperties
+    from 'src/main/templates'
+    into 'build/generated/sources/modMetadata'
+}
+
+sourceSets.main.resources.srcDir(generateModMetadata)
+neoForge.ideSyncTask(generateModMetadata)
+
+configurations {
+    runtimeClasspath.extendsFrom localRuntime
 }
 
 tasks.withType(JavaCompile).configureEach {
-    it.options.release = 25
+    options.encoding = 'UTF-8'
+    options.release = 25
 }
 
 java {
     withSourcesJar()
 }
 
+def archiveBaseName = archives_base_name
 jar {
-    from("LICENSE") {
-        rename { "${it}_${project.archives_base_name}" }
-    }
-}
-
-
-if (System.getenv("MODRINTH")) {
-    modrinth {
-        token = System.getenv("MODRINTH")
-        projectId = 'DlSXkZVT'// The ID of your modrinth project, slugs will not work.
-        versionNumber = "" + version // The version of the mod to upload.
-        versionType = "beta"
-        uploadFile = jar // This links to a task that builds your mod jar and sets "uploadFile" to the mod jar.
-        gameVersions = [((String) project.minecraft_version)]
-        changelog = System.getenv("CHANGELOG")
-        loaders = ["fabric"]
-
-        dependencies {
-            required.project "midnightlib"
-        }
-    }
-
-    jar {
-        finalizedBy project.tasks.modrinth
+    from('LICENSE') {
+        rename('LICENSE', "LICENSE_${archiveBaseName}")
     }
 }

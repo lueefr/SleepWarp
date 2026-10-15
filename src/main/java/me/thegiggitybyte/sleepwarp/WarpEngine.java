@@ -2,12 +2,12 @@ package me.thegiggitybyte.sleepwarp;
 
 import me.thegiggitybyte.sleepwarp.config.SleepWarpConfig;
 import me.thegiggitybyte.sleepwarp.runnable.*;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.tick.LevelTickEvent;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.network.protocol.game.ClientboundSetTimePacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
@@ -28,12 +28,18 @@ public class WarpEngine {
 
     private WarpEngine() {
         random = new Random();
-        ServerTickEvents.END_LEVEL_TICK.register(this::onEndTick);
+        NeoForge.EVENT_BUS.addListener(this::onLevelPostTick);
     }
 
     public static void initialize() {
         if (instance != null) throw new AssertionError();
         instance = new WarpEngine();
+    }
+
+    private void onLevelPostTick(LevelTickEvent.Post event) {
+        if (event.getLevel() instanceof ServerLevel world) {
+            onEndTick(world);
+        }
     }
 
     private void onEndTick(ServerLevel world) {
