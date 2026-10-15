@@ -40,7 +40,11 @@ jobs:
               tail -n 120 gradle-build.log
               echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
-            diagnostic="$(tail -n 35 gradle-build.log | tr '\n' ' ' | cut -c1-6000)"
+            failure_context="$(grep -n -E -A 35 -B 4 '^\* What went wrong:|^> |error:|Could not|Failed to|does not exist' gradle-build.log | tail -n 90 || true)"
+            if [[ -z "$failure_context" ]]; then
+              failure_context="$(tail -n 60 gradle-build.log)"
+            fi
+            diagnostic="$(printf '%s' "$failure_context" | tr '\n' ' ' | cut -c1-6000)"
             echo "::error::Gradle build failed: ${diagnostic}"
             exit 1
           fi
