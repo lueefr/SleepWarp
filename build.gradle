@@ -76,8 +76,9 @@ java {
     withSourcesJar()
 }
 
+def archiveBaseName = archives_base_name
 jar {
     from('LICENSE') {
-        rename { "${it}_${project.archives_base_name}" }
+        rename('LICENSE', "LICENSE_${archiveBaseName}")
     }
 }
