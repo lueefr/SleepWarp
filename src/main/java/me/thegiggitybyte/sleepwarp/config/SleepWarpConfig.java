@@ -92,7 +92,7 @@ public final class SleepWarpConfig {
     }
 
     public static void register(ModContainer modContainer) {
-        NeoForge.EVENT_BUS.addListener(SleepWarpConfig::onConfigChanged);
+        modContainer.getEventBus().addListener(SleepWarpConfig::onConfigChanged);
         modContainer.registerConfig(ModConfig.Type.COMMON, SPEC);
         copyValues();
     }
