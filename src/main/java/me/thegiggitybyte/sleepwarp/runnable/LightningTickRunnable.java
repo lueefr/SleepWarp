@@ -5,7 +5,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.entity.animal.equine.SkeletonHorse;
 import net.minecraft.world.level.block.Blocks;
@@ -33,7 +32,7 @@ public class LightningTickRunnable implements Runnable {
         boolean skeletonHorseSpawn = canSpawnMobs && (new Random().nextDouble() < localDifficulty) && !world.getBlockState(blockPos.below()).is(BlockTags.LIGHTNING_RODS);
         
         if (skeletonHorseSpawn) {
-            SkeletonHorse skeletonHorseEntity = EntityTypes.SKELETON_HORSE.create(world, EntitySpawnReason.NATURAL);
+            SkeletonHorse skeletonHorseEntity = EntityType.SKELETON_HORSE.create(world, EntitySpawnReason.NATURAL);
             if (skeletonHorseEntity != null) {
                 skeletonHorseEntity.setTrap(true);
                 skeletonHorseEntity.setAge(0);
@@ -42,7 +41,7 @@ public class LightningTickRunnable implements Runnable {
             }
         }
         
-        LightningBolt lightningEntity = EntityTypes.LIGHTNING_BOLT.create(world, EntitySpawnReason.NATURAL);
+        LightningBolt lightningEntity = EntityType.LIGHTNING_BOLT.create(world, EntitySpawnReason.NATURAL);
         if (lightningEntity != null) {
             lightningEntity.snapTo(Vec3.atBottomCenterOf(blockPos));
             lightningEntity.setVisualOnly(skeletonHorseSpawn);
