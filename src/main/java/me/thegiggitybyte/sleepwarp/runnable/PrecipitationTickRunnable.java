@@ -7,7 +7,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.SnowLayerBlock;
 import net.minecraft.world.level.chunk.LevelChunk;
-import net.minecraft.world.level.gamerules.GameRules;
+import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.levelgen.Heightmap;
 
 public class PrecipitationTickRunnable implements Runnable {
@@ -30,7 +30,7 @@ public class PrecipitationTickRunnable implements Runnable {
         }
         
         if (SleepWarpConfig.tick_snow_accumulation) {
-            var layerHeight = world.getGameRules().get(GameRules.MAX_SNOW_ACCUMULATION_HEIGHT);
+            var layerHeight = world.getGameRules().getInt(GameRules.RULE_SNOW_ACCUMULATION_HEIGHT);
             if (layerHeight == 0 || !biome.shouldSnow(world, topBlockPos)) return;
             
             var blockState = world.getBlockState(topBlockPos);
@@ -46,7 +46,7 @@ public class PrecipitationTickRunnable implements Runnable {
             }
         }
         
-        var precipitation = biome.getPrecipitationAt(topBlockPos.below(), world.getSeaLevel());
+        var precipitation = biome.getPrecipitationAt(topBlockPos.below());
         if (precipitation != Biome.Precipitation.NONE) {
             var blockState = world.getBlockState(topBlockPos.below());
             blockState.getBlock().handlePrecipitation(blockState, world, topBlockPos.below(), precipitation);

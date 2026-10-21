@@ -4,7 +4,7 @@ import net.minecraft.core.SectionPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.chunk.LevelChunk;
-import net.minecraft.world.level.gamerules.GameRules;
+import net.minecraft.world.level.GameRules;
 
 public class RandomTickRunnable implements Runnable {
     private final ServerLevel world;
@@ -30,7 +30,7 @@ public class RandomTickRunnable implements Runnable {
             var sectionCoordinate = chunk.getSectionYFromSectionIndex(sectionIndex);
             var startY = SectionPos.sectionToBlockCoord(sectionCoordinate);
             
-            for(int i = 0; i < world.getGameRules().get(GameRules.RANDOM_TICK_SPEED); ++i) {
+            for(int i = 0; i < world.getGameRules().getInt(GameRules.RULE_RANDOMTICKING); ++i) {
                 var blockPos = world.getBlockRandomPos(startX, startY, startZ, 15);
                 var blockState = chunkSection.getBlockState(blockPos.getX() - startX , blockPos.getY() - startY, blockPos.getZ() - startZ);
                 var fluidState = blockState.getFluidState();

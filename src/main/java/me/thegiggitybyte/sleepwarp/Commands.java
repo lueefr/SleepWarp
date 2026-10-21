@@ -5,7 +5,7 @@ import com.mojang.brigadier.context.CommandContext;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.chat.Component;
-import net.neoforged.fml.ModContainer;
+import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 
 import static net.minecraft.commands.Commands.literal;
@@ -14,14 +14,15 @@ public final class Commands {
     private Commands() {
     }
 
-    static void register(ModContainer modContainer) {
-        modContainer.getEventBus().addListener(Commands::onRegisterCommands);
+    static void register() {
+        // RegisterCommandsEvent is fired on the NeoForge (game) event bus, not the mod bus.
+        NeoForge.EVENT_BUS.addListener(Commands::onRegisterCommands);
     }
 
     private static void onRegisterCommands(RegisterCommandsEvent event) {
         var dispatcher = event.getDispatcher();
         var sleepWarpCommand = dispatcher.register(literal("sleepwarp").requires(
-                net.minecraft.commands.Commands.hasPermission(net.minecraft.commands.Commands.LEVEL_MODERATORS)));
+                source -> source.hasPermission(net.minecraft.commands.Commands.LEVEL_MODERATORS)));
         dispatcher.register(literal("sleep").redirect(sleepWarpCommand));
 
         var statusCommand = literal("status").executes(Commands::executeStatusCommand).build();

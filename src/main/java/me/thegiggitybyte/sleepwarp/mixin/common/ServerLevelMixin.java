@@ -6,7 +6,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.players.SleepStatus;
 import net.minecraft.util.Mth;
-import net.minecraft.world.level.gamerules.GameRules;
+import net.minecraft.world.level.GameRules;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
@@ -62,7 +62,7 @@ public abstract class ServerLevelMixin {
         if (inBedCount == 0) {
             messageText = Component.translatable("text.sleepwarp.players_sleeping", tallyText.withStyle(ChatFormatting.DARK_GRAY));
         } else if (SleepWarpConfig.use_sleep_percentage) {
-            var percentRequired = world.getGameRules().get(GameRules.PLAYERS_SLEEPING_PERCENTAGE);
+            var percentRequired = world.getGameRules().getInt(GameRules.RULE_PLAYERS_SLEEPING_PERCENTAGE);
             var minSleepingCount = Math.max(1, Mth.ceil((playerCount * percentRequired) / 100.0F));
 
             if (sleepingCount < minSleepingCount && minSleepingCount - inBedCount > 0) {

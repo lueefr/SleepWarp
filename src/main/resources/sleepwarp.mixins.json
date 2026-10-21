@@ -1,10 +1,9 @@
 {
   "required": true,
   "minVersion": "0.8",
-  "compatibilityLevel": "JAVA_25",
+  "compatibilityLevel": "JAVA_21",
   "package": "me.thegiggitybyte.sleepwarp.mixin",
   "mixins": [
-    "common.PlayerMixin",
     "common.ServerLevelMixin"
   ],
   "injectors": {
