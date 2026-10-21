@@ -1,0 +1,133 @@
+name: Server smoke test (temporary)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: Inspect jar and boot dedicated server
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Build and inspect distributable jar
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./gradlew --no-daemon --console=plain clean build
+          jar=$(find build/libs -maxdepth 1 -name 'sleepwarp-*.jar' ! -name '*-sources.jar' | head -n1)
+          echo "== JAR: $jar =="
+          test -n "$jar"
+          python3 - "$jar" <<'PY'
+          import sys, zipfile
+          z = zipfile.ZipFile(sys.argv[1])
+          names = sorted(z.namelist())
+          print("\n".join("  " + n for n in names))
+          for required in (
+              "META-INF/neoforge.mods.toml",
+              "META-INF/accesstransformer.cfg",
+              "sleepwarp.mixins.json",
+              "me/thegiggitybyte/sleepwarp/SleepWarp.class",
+              "me/thegiggitybyte/sleepwarp/WarpEngine.class",
+              "me/thegiggitybyte/sleepwarp/mixin/common/ServerLevelMixin.class",
+          ):
+              assert required in names, f"MISSING {required}"
+          assert not any("PlayerMixin" in n for n in names), "PlayerMixin should be gone"
+          print("--- META-INF/neoforge.mods.toml ---")
+          print(z.read("META-INF/neoforge.mods.toml").decode())
+          print("--- META-INF/MANIFEST.MF ---")
+          print(z.read("META-INF/MANIFEST.MF").decode() if "META-INF/MANIFEST.MF" in names else "(none)")
+          print("--- sleepwarp.mixins.json ---")
+          print(z.read("sleepwarp.mixins.json").decode())
+          print("--- accesstransformer.cfg ---")
+          print(z.read("META-INF/accesstransformer.cfg").decode())
+          print("JAR_INSPECTION_OK")
+          PY
+
+      - name: Boot dedicated server (smoke test)
+        shell: bash
+        run: |
+          set -uo pipefail
+
+          boot_server() {
+            local attempt="$1"
+            local log="smoke-server-${attempt}.log"
+            echo "===== Server boot attempt ${attempt} ====="
+            # Pre-accept the EULA in every plausible run directory, plus flip
+            # any eula.txt the server itself generates while it is starting.
+            for d in run run/server runs runs/server; do
+              mkdir -p "$d"
+              echo "eula=true" > "$d/eula.txt"
+            done
+            find . -name eula.txt -not -path './.gradle/*' -exec sh -c 'echo eula=true > "$1"' _ {} \; 2>/dev/null || true
+
+            timeout 540 ./gradlew --no-daemon --console=plain runServer > "$log" 2>&1 &
+            local pid=$!
+
+            local waited=0
+            while [ $waited -lt 540 ]; do
+              if grep -q 'Done (' "$log"; then
+                echo "SERVER_REACHED_DONE after ~${waited}s (attempt ${attempt})"
+                kill $pid 2>/dev/null || true
+                wait $pid 2>/dev/null || true
+                return 0
+              fi
+              if ! kill -0 $pid 2>/dev/null; then
+                echo "Server process exited (attempt ${attempt}). Log tail:"
+                tail -n 80 "$log"
+                return 1
+              fi
+              find . -name eula.txt -not -path './.gradle/*' -exec sh -c 'grep -q "eula=true" "$1" || echo eula=true > "$1"' _ {} \; 2>/dev/null || true
+              sleep 10
+              waited=$((waited + 10))
+            done
+
+            echo "Timed out waiting for server (attempt ${attempt}). Log tail:"
+            tail -n 120 "$log"
+            kill $pid 2>/dev/null || true
+            return 1
+          }
+
+          if boot_server 1 || boot_server 2; then
+            echo "SMOKE_OK"
+          else
+            echo "SMOKE_FAILED"
+            exit 1
+          fi
+
+      - name: Show server evidence (mod loaded, no mixin failures)
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          logs=$(ls smoke-server-*.log 2>/dev/null; find run runs -name 'latest.log' 2>/dev/null)
+          echo "Logs: $logs"
+          for f in $logs; do
+            echo "===== $f : sleepwarp/mod lines ====="
+            grep -i -n 'sleepwarp' "$f" | head -n 40
+            echo "===== $f : crash/mixin-error lines ====="
+            grep -i -n 'mixin.*\(fail\|error\|invalid\)\|InjectionError\|InvalidInjection\|Failed to create mod instance\|CRITICAL\|A critical error occurred' "$f" | head -n 40
+            echo "===== $f : Done line ====="
+            grep -n 'Done (' "$f" | head -n 5
+          done
+          {
+            echo '## Server smoke test'
+            if grep -q 'SERVER_REACHED_DONE' smoke-server-*.log 2>/dev/null || grep -rq 'Done (' smoke-server-*.log run runs 2>/dev/null; then
+              echo 'Dedicated server reached `Done` with SleepWarp loaded.'
+            else
+              echo 'Server did NOT reach `Done` — see step logs.'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
