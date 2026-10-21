@@ -109,6 +109,70 @@ jobs:
             exit 1
           fi
 
+      - name: Boot production NeoForge server with the built jar
+        shell: bash
+        run: |
+          set -uo pipefail
+          jar=$(find build/libs -maxdepth 1 -name 'sleepwarp-*.jar' ! -name '*-sources.jar' | head -n1)
+          echo "Production jar under test: $jar"
+          test -n "$jar"
+
+          mkdir -p prodserver
+          cd prodserver
+          curl -fsSL -o neoforge-installer.jar \
+            "https://maven.neoforged.net/releases/net/neoforged/neoforge/21.1.264/neoforge-21.1.264-installer.jar"
+          java -jar neoforge-installer.jar --installServer > installer.log 2>&1 || { tail -n 80 installer.log; exit 1; }
+          echo "=== Installer finished, server dir: ==="
+          ls -la
+
+          mkdir -p mods
+          cp "../$jar" mods/
+          echo "eula=true" > eula.txt
+          ls -la mods/
+
+          boot_prod() {
+            echo "===== Production server boot ====="
+            timeout 420 bash run.sh nogui > prod-server.log 2>&1 &
+            local pid=$!
+            local waited=0
+            while [ $waited -lt 420 ]; do
+              if grep -q 'Done (' prod-server.log; then
+                echo "PROD_SERVER_REACHED_DONE after ~${waited}s"
+                echo "----- sleepwarp lines -----"
+                grep -i 'sleepwarp' prod-server.log | head -n 40 || true
+                echo "----- Done line -----"
+                grep 'Done (' prod-server.log | head -n 3 || true
+                kill $pid 2>/dev/null || true
+                wait $pid 2>/dev/null || true
+                return 0
+              fi
+              if grep -q -i 'mixin.*\(fail\|error\)\|Failed to create mod instance\|has failed to load correctly' prod-server.log; then
+                echo "PROD_SERVER_CRASH_MARKER_FOUND"
+                tail -n 120 prod-server.log
+                kill $pid 2>/dev/null || true
+                return 1
+              fi
+              if ! kill -0 $pid 2>/dev/null; then
+                echo "PROD_SERVER_EXITED_EARLY"
+                tail -n 120 prod-server.log
+                return 1
+              fi
+              sleep 10
+              waited=$((waited + 10))
+            done
+            echo "PROD_SERVER_TIMEOUT"
+            tail -n 120 prod-server.log
+            kill $pid 2>/dev/null || true
+            return 1
+          }
+
+          if boot_prod; then
+            echo "PROD_SMOKE_OK"
+          else
+            echo "PROD_SMOKE_FAILED"
+            exit 1
+          fi
+
       - name: Show server evidence (mod loaded, no mixin failures)
         if: always()
         shell: bash
