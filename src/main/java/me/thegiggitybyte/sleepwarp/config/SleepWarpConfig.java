@@ -1,10 +1,10 @@
 package me.thegiggitybyte.sleepwarp.config;
 
+import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.config.ModConfigEvent;
 import net.neoforged.neoforge.common.ModConfigSpec;
-import net.neoforged.neoforge.common.NeoForge;
 
 /**
  * Server/common configuration for SleepWarp.
@@ -91,10 +91,11 @@ public final class SleepWarpConfig {
     private SleepWarpConfig() {
     }
 
-    public static void register(ModContainer modContainer) {
-        modContainer.getEventBus().addListener(SleepWarpConfig::onConfigChanged);
+    public static void register(IEventBus modEventBus, ModContainer modContainer) {
+        modEventBus.addListener(SleepWarpConfig::onConfigChanged);
         modContainer.registerConfig(ModConfig.Type.COMMON, SPEC);
-        copyValues();
+        // Plain fields above already hold the spec defaults; onConfigChanged
+        // copies the actual file values once the config has been loaded.
     }
 
     private static void onConfigChanged(ModConfigEvent event) {
